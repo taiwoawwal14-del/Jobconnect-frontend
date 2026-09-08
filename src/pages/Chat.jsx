@@ -3,7 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import { io } from "socket.io-client";
 import "../css/Chat.css";
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:3000";
+const API_BASE = import.meta.env.VITE_API_BASE_URL || "https://jobconnect-backend-9q6l.onrender.com";
 
 export default function Chat() {
   const [searchParams] = useSearchParams();
