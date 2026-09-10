@@ -3,7 +3,7 @@ import "../css/Signup.css";
 import logoSrc from "../assets/secondjob.png";
 import { useNavigate } from "react-router-dom";
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || "https://jobconnect-backend-9q6l.onrender.com";
+const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:3000";
 
 export default function Signup() {
   const navigate = useNavigate();

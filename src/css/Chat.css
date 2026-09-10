@@ -48,6 +48,51 @@
   color: var(--muted);
 }
 
+.chat-back-btn {
+  border: 1px solid rgba(15, 23, 42, 0.1);
+  background: rgba(255, 255, 255, 0.7);
+  color: var(--brand-dark);
+  border-radius: 10px;
+  padding: 0.55rem 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.chat-history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  margin-top: 1rem;
+}
+
+.chat-history-item {
+  width: 100%;
+  background: #fff;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 12px;
+  padding: 0.8rem 0.9rem;
+  text-align: left;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: var(--brand-dark);
+}
+
+.chat-history-item strong,
+.chat-history-item small {
+  display: block;
+}
+
+.chat-history-item small {
+  margin-top: 0.2rem;
+  color: var(--muted);
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .chat-thread {
   height: 420px;
   overflow-y: auto;

@@ -1,23 +1,85 @@
 import React, { useState, useEffect, useRef } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import { io } from "socket.io-client";
 import "../css/Chat.css";
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || "https://jobconnect-backend-9q6l.onrender.com";
+const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:3000";
+
+function readConversations() {
+  try {
+    const saved = localStorage.getItem("jobconnect-chat-history");
+    return saved ? JSON.parse(saved) : [];
+  } catch {
+    return [];
+  }
+}
 
 export default function Chat() {
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const recipientId = searchParams.get("recipientId");
-  const jobTitle = searchParams.get("jobTitle") || "this role";
   const currentUserId = localStorage.getItem("userId") || "guest";
+  const initialName = searchParams.get("displayName") || "this person";
+  const [recipientName, setRecipientName] = useState(initialName);
   const [messages, setMessages] = useState([]);
   const [text, setText] = useState("");
   const [connected, setConnected] = useState(false);
+  const [conversations, setConversations] = useState([]);
   const socketRef = useRef(null);
   const listRef = useRef(null);
 
+  function saveConversation(partnerId, partnerName, previewText) {
+    if (!partnerId) return;
+
+    setConversations((prev) => {
+      const next = [
+        {
+          id: partnerId,
+          name: partnerName || "User",
+          lastMessage: previewText || "New message",
+          updatedAt: Date.now(),
+        },
+        ...prev.filter((item) => item.id !== partnerId),
+      ].slice(0, 20);
+
+      localStorage.setItem("jobconnect-chat-history", JSON.stringify(next));
+      return next;
+    });
+  }
+
   useEffect(() => {
-    if (!recipientId) return;
+    setConversations(readConversations());
+  }, []);
+
+  useEffect(() => {
+    if (!recipientId || recipientId === currentUserId) {
+      navigate("/chat");
+      return;
+    }
+
+    const loadRecipient = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/api/users/${recipientId}`);
+        if (!res.ok) return;
+        const user = await res.json();
+        const name = user.fullName || user.username || "User";
+        setRecipientName(name);
+        saveConversation(recipientId, name, "Start a conversation");
+      } catch {
+        setRecipientName(initialName || "User");
+        saveConversation(
+          recipientId,
+          initialName || "User",
+          "Start a conversation",
+        );
+      }
+    };
+
+    loadRecipient();
+  }, [recipientId, currentUserId, navigate, initialName]);
+
+  useEffect(() => {
+    if (!recipientId || recipientId === currentUserId) return;
 
     const roomId = [currentUserId, recipientId].sort().join("_");
     const socket = io(API_BASE, {
@@ -34,10 +96,28 @@ export default function Chat() {
 
     socket.on("chat_history", (history = []) => {
       setMessages(history);
+      if (history.length > 0) {
+        const last = history[history.length - 1];
+        const partnerName =
+          last.senderId === currentUserId
+            ? recipientName
+            : last.senderName || recipientName;
+        saveConversation(recipientId, partnerName, last.text);
+      }
     });
 
     socket.on("receive_message", (message) => {
       setMessages((prev) => [...prev, message]);
+
+      if (message.senderId === currentUserId) {
+        saveConversation(recipientId, recipientName, message.text);
+      } else {
+        saveConversation(
+          message.senderId,
+          message.senderName || recipientName,
+          message.text,
+        );
+      }
     });
 
     socket.on("disconnect", () => setConnected(false));
@@ -45,7 +125,7 @@ export default function Chat() {
     return () => {
       socket.disconnect();
     };
-  }, [recipientId, currentUserId]);
+  }, [recipientId, currentUserId, recipientName]);
 
   useEffect(() => {
     if (listRef.current) {
@@ -57,6 +137,11 @@ export default function Chat() {
     e.preventDefault();
     if (!text.trim() || !recipientId || !socketRef.current) return;
 
+    if (recipientId === currentUserId) {
+      navigate("/chat");
+      return;
+    }
+
     const roomId = [currentUserId, recipientId].sort().join("_");
     const payload = {
       roomId,
@@ -66,6 +151,7 @@ export default function Chat() {
     };
 
     socketRef.current.emit("send_message", payload);
+    saveConversation(recipientId, recipientName, text.trim());
     setText("");
   }
 
@@ -74,12 +160,34 @@ export default function Chat() {
       <div className="chat-page form-page">
         <div className="chat-shell auth-layout" style={{ maxWidth: 720 }}>
           <div className="auth-form chat-empty-state">
-            <p className="eyebrow">Direct message</p>
-            <h2>Start a conversation</h2>
-            <p className="text-muted">
-              Choose a job and press “Message” to start a private chat about the
-              role.
-            </p>
+            <p className="eyebrow">Direct messages</p>
+            <h2>Recent conversations</h2>
+
+            {conversations.length === 0 ? (
+              <p className="text-muted">
+                You have not started any direct messages yet.
+              </p>
+            ) : (
+              <div className="chat-history-list">
+                {conversations.map((conversation) => (
+                  <button
+                    key={conversation.id}
+                    type="button"
+                    className="chat-history-item"
+                    onClick={() =>
+                      navigate(
+                        `/chat?recipientId=${conversation.id}&displayName=${encodeURIComponent(conversation.name)}`,
+                      )
+                    }
+                  >
+                    <div>
+                      <strong>{conversation.name}</strong>
+                      <small>{conversation.lastMessage}</small>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -91,13 +199,37 @@ export default function Chat() {
       <div className="chat-shell auth-layout" style={{ maxWidth: 900 }}>
         <div className="auth-form chat-panel">
           <div className="chat-header">
+            <button
+              type="button"
+              className="chat-back-btn"
+              onClick={() => navigate("/chat")}
+            >
+              ← Back
+            </button>
             <div>
-              <p className="eyebrow">Job discussion</p>
-              <h2>{jobTitle}</h2>
+              <p className="eyebrow">Direct message</p>
+              <h2>{recipientName}</h2>
             </div>
-            <span className={`chat-status ${connected ? "online" : "offline"}`}>
-              {connected ? "Connected" : "Connecting..."}
-            </span>
+            <div
+              style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}
+            >
+              <button
+                type="button"
+                className="chat-back-btn"
+                onClick={() =>
+                  navigate(
+                    `/profile?userId=${recipientId}&returnToChat=1&displayName=${encodeURIComponent(recipientName)}`,
+                  )
+                }
+              >
+                View profile
+              </button>
+              <span
+                className={`chat-status ${connected ? "online" : "offline"}`}
+              >
+                {connected ? "Connected" : "Connecting..."}
+              </span>
+            </div>
           </div>
 
           <div ref={listRef} className="chat-thread">
