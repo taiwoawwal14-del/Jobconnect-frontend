@@ -9,7 +9,7 @@
 
 .jobs-topbar {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 0.7rem;
   padding: 0.8rem 1rem;
   margin: 0 auto 1.3rem;
@@ -21,6 +21,9 @@
   position: sticky;
   top: 16px;
   z-index: 10;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
 }
 
 .jobs-topbar button {
@@ -32,7 +35,13 @@
   padding: 0.7rem 1rem;
   cursor: pointer;
   transition: all 0.2s ease;
+  flex: 0 0 auto;
 }
+
+/* hide excessive scrollbar visually but keep it usable */
+.jobs-topbar::-webkit-scrollbar { height: 8px; }
+.jobs-topbar::-webkit-scrollbar-thumb { background: rgba(15,23,42,0.08); border-radius: 999px; }
+.jobs-topbar::-webkit-scrollbar-track { background: transparent; }
 
 .jobs-topbar button.active {
   background: var(--btn-bg);
@@ -157,6 +166,19 @@
 
 .jobs-post-btn {
   margin-top: 1rem;
+}
+
+.jobs-post-success {
+  display: flex;
+  align-items: center;
+  min-height: 46px;
+  padding: 0.75rem 0.9rem;
+  border: 1px solid rgba(0, 166, 255, 0.26);
+  border-radius: 11px;
+  background: linear-gradient(90deg, rgba(0, 166, 255, 0.1), rgba(11, 102, 255, 0.07));
+  color: var(--brand-dark);
+  font-size: 0.92rem;
+  font-weight: 750;
 }
 
 .jobs-list {

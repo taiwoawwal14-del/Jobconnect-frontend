@@ -25,6 +25,7 @@ export default function Chat() {
   const [text, setText] = useState("");
   const [connected, setConnected] = useState(false);
   const [conversations, setConversations] = useState([]);
+  const [people, setPeople] = useState([]);
   const socketRef = useRef(null);
   const listRef = useRef(null);
 
@@ -50,6 +51,29 @@ export default function Chat() {
   useEffect(() => {
     setConversations(readConversations());
   }, []);
+
+  useEffect(() => {
+    const loadPeople = async () => {
+      try {
+        const res = await fetch(
+          `${API_BASE}/api/users?excludeId=${encodeURIComponent(currentUserId)}`,
+        );
+        if (!res.ok) return;
+        setPeople(await res.json());
+      } catch (err) {
+        console.error("Failed to load chat contacts", err);
+      }
+    };
+
+    if (currentUserId !== "guest") loadPeople();
+  }, [currentUserId]);
+
+  function openConversation(id, name) {
+    if (!id || id === currentUserId) return;
+    navigate(
+      `/chat?recipientId=${id}&displayName=${encodeURIComponent(name || "User")}`,
+    );
+  }
 
   useEffect(() => {
     if (!recipientId || recipientId === currentUserId) {
@@ -164,9 +188,7 @@ export default function Chat() {
             <h2>Recent conversations</h2>
 
             {conversations.length === 0 ? (
-              <p className="text-muted">
-                You have not started any direct messages yet.
-              </p>
+              <p className="text-muted">Choose someone below to start a conversation.</p>
             ) : (
               <div className="chat-history-list">
                 {conversations.map((conversation) => (
@@ -174,11 +196,7 @@ export default function Chat() {
                     key={conversation.id}
                     type="button"
                     className="chat-history-item"
-                    onClick={() =>
-                      navigate(
-                        `/chat?recipientId=${conversation.id}&displayName=${encodeURIComponent(conversation.name)}`,
-                      )
-                    }
+                    onClick={() => openConversation(conversation.id, conversation.name)}
                   >
                     <div>
                       <strong>{conversation.name}</strong>
@@ -188,6 +206,30 @@ export default function Chat() {
                 ))}
               </div>
             )}
+
+            <div className="chat-people-section">
+              <p className="chat-list-label">People</p>
+              {people.length === 0 ? (
+                <p className="text-muted">No other users are available yet.</p>
+              ) : (
+                <div className="chat-history-list">
+                  {people.map((person) => {
+                    const name = person.fullName || person.username || "User";
+                    return (
+                      <button
+                        key={person._id}
+                        type="button"
+                        className="chat-history-item chat-person-item"
+                        onClick={() => openConversation(person._id, name)}
+                      >
+                        <strong>{name}</strong>
+                        <small>Start a direct conversation</small>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -197,6 +239,52 @@ export default function Chat() {
   return (
     <div className="chat-page form-page">
       <div className="chat-shell auth-layout" style={{ maxWidth: 900 }}>
+        <aside className="chat-conversation-sidebar">
+          <div className="chat-sidebar-heading">
+            <p className="eyebrow">Messages</p>
+            <h2>Conversations</h2>
+          </div>
+          {conversations.length === 0 ? (
+            <p className="chat-sidebar-empty">Your recent conversations will appear here.</p>
+          ) : (
+            <div className="chat-history-list">
+              {conversations.map((conversation) => (
+                <button
+                  key={conversation.id}
+                  type="button"
+                  className={`chat-history-item ${conversation.id === recipientId ? "active" : ""}`}
+                  onClick={() =>
+                    openConversation(conversation.id, conversation.name)
+                  }
+                >
+                  <div>
+                    <strong>{conversation.name}</strong>
+                    <small>{conversation.lastMessage}</small>
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+          <div className="chat-people-section">
+            <p className="chat-list-label">People</p>
+            {people
+              .filter((person) => !conversations.some((item) => item.id === person._id))
+              .map((person) => {
+                const name = person.fullName || person.username || "User";
+                return (
+                  <button
+                    key={person._id}
+                    type="button"
+                    className="chat-history-item chat-person-item"
+                    onClick={() => openConversation(person._id, name)}
+                  >
+                    <strong>{name}</strong>
+                    <small>Start a direct conversation</small>
+                  </button>
+                );
+              })}
+          </div>
+        </aside>
         <div className="auth-form chat-panel">
           <div className="chat-header">
             <button
@@ -224,11 +312,6 @@ export default function Chat() {
               >
                 View profile
               </button>
-              <span
-                className={`chat-status ${connected ? "online" : "offline"}`}
-              >
-                {connected ? "Connected" : "Connecting..."}
-              </span>
             </div>
           </div>
 

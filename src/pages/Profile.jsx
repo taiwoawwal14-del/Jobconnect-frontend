@@ -15,6 +15,14 @@ export default function Profile() {
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [status, setStatus] = useState({ type: "", message: "" });
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+
+  function updateProfile(field, value) {
+    setProfile((current) => ({ ...current, [field]: value }));
+    setHasUnsavedChanges(true);
+    if (status.type === "error") setStatus({ type: "", message: "" });
+  }
 
   function handleAvatarUpload(e) {
     const file = e.target.files && e.target.files[0];
@@ -22,7 +30,7 @@ export default function Profile() {
 
     const reader = new FileReader();
     reader.onload = () => {
-      setProfile({ ...profile, avatar: reader.result });
+      updateProfile("avatar", reader.result);
     };
     reader.readAsDataURL(file);
   }
@@ -44,6 +52,7 @@ export default function Profile() {
       if (!res.ok) throw new Error("Failed to load profile");
       const data = await res.json();
       setProfile(data);
+      setHasUnsavedChanges(false);
     } catch (err) {
       console.error(err);
     } finally {
@@ -54,7 +63,13 @@ export default function Profile() {
   async function handleSave(e) {
     e.preventDefault();
     if (!profile || !profile._id || !isOwnProfile) return;
+    // simple client-side validation
+    if (!profile.fullName || !profile.fullName.trim()) {
+      setStatus({ type: "error", message: "Full name is required." });
+      return;
+    }
     setSaving(true);
+    setStatus({ type: "", message: "" });
     try {
       const payload = {
         fullName: profile.fullName,
@@ -75,10 +90,17 @@ export default function Profile() {
 
       if (!res.ok) throw new Error("Save failed");
       const data = await res.json();
+      // reload profile from server to ensure saved state
       setProfile(data);
       localStorage.setItem("userId", data._id);
+      setHasUnsavedChanges(false);
+      setStatus({ type: "", message: "" });
+      // re-fetch to ensure any server-side changes are reflected
+      fetchProfile(data._id);
     } catch (err) {
       console.error(err);
+      setStatus({ type: "error", message: err.message || "Save failed" });
+      setHasUnsavedChanges(true);
     } finally {
       setSaving(false);
     }
@@ -105,6 +127,13 @@ export default function Profile() {
     <div className="profile-page form-page">
       <div className="profile-shell auth-layout" style={{ maxWidth: 1000 }}>
         <form className="auth-form profile-form" onSubmit={handleSave}>
+          {status.message && (
+            <div
+              className={`msg-box ${status.type === "success" ? "msg-success" : "msg-error"}`}
+            >
+              {status.message}
+            </div>
+          )}
           <div className="profile-header-row">
             <div>
               <p className="eyebrow">
@@ -171,7 +200,7 @@ export default function Profile() {
                 readOnly={!isOwnProfile}
                 onChange={(e) =>
                   isOwnProfile &&
-                  setProfile({ ...profile, fullName: e.target.value })
+                  updateProfile("fullName", e.target.value)
                 }
               />
             </div>
@@ -183,7 +212,7 @@ export default function Profile() {
                 readOnly={!isOwnProfile}
                 onChange={(e) =>
                   isOwnProfile &&
-                  setProfile({ ...profile, username: e.target.value })
+                  updateProfile("username", e.target.value)
                 }
               />
             </div>
@@ -195,7 +224,7 @@ export default function Profile() {
                 readOnly={!isOwnProfile}
                 onChange={(e) =>
                   isOwnProfile &&
-                  setProfile({ ...profile, location: e.target.value })
+                  updateProfile("location", e.target.value)
                 }
               />
             </div>
@@ -220,7 +249,7 @@ export default function Profile() {
                 <input
                   value={profile?.contactInfo || ""}
                   onChange={(e) =>
-                    setProfile({ ...profile, contactInfo: e.target.value })
+                    updateProfile("contactInfo", e.target.value)
                   }
                 />
               </div>
@@ -234,7 +263,7 @@ export default function Profile() {
                 readOnly={!isOwnProfile}
                 onChange={(e) =>
                   isOwnProfile &&
-                  setProfile({ ...profile, bio: e.target.value })
+                  updateProfile("bio", e.target.value)
                 }
               />
             </div>
@@ -246,13 +275,13 @@ export default function Profile() {
                 readOnly={!isOwnProfile}
                 onChange={(e) =>
                   isOwnProfile &&
-                  setProfile({
-                    ...profile,
-                    skills: e.target.value
+                  updateProfile(
+                    "skills",
+                    e.target.value
                       .split(",")
                       .map((s) => s.trim())
                       .filter(Boolean),
-                  })
+                  )
                 }
               />
             </div>
@@ -265,7 +294,7 @@ export default function Profile() {
                 readOnly={!isOwnProfile}
                 onChange={(e) =>
                   isOwnProfile &&
-                  setProfile({ ...profile, experience: e.target.value })
+                  updateProfile("experience", e.target.value)
                 }
               />
             </div>
@@ -273,7 +302,11 @@ export default function Profile() {
 
           {isOwnProfile && (
             <button className="btn-submit" type="submit" disabled={saving}>
-              {saving ? "Saving profile..." : "Save profile"}
+              {saving
+                ? "Saving..."
+                : hasUnsavedChanges
+                  ? "Save Changes"
+                  : "Saved ✓"}
             </button>
           )}
         </form>

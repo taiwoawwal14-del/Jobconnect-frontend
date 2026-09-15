@@ -22,6 +22,7 @@ export default function Jobs() {
   const [form, setForm] = useState(emptyForm);
   const [loading, setLoading] = useState(false);
   const [posting, setPosting] = useState(false);
+  const [postStatus, setPostStatus] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [highlightedJob, setHighlightedJob] = useState(null);
   const [activeTab, setActiveTab] = useState("findJobs");
@@ -44,6 +45,7 @@ export default function Jobs() {
 
   function updateField(field, value) {
     setForm((prev) => ({ ...prev, [field]: value }));
+    if (postStatus) setPostStatus("");
   }
 
   async function fetchJobs() {
@@ -76,6 +78,7 @@ export default function Jobs() {
     }
 
     setPosting(true);
+    setPostStatus("");
     try {
       const payload = {
         ...form,
@@ -97,6 +100,7 @@ export default function Jobs() {
       setJobs((s) => [job, ...s]);
       setHighlightedJob(job);
       setForm(emptyForm);
+      setPostStatus("Job posted successfully! ✓");
     } catch (err) {
       console.error(err);
     } finally {
@@ -249,6 +253,11 @@ export default function Jobs() {
             </div>
 
             <form className="jobs-form" onSubmit={handlePost}>
+              {postStatus && (
+                <div className="jobs-post-success" role="status">
+                  {postStatus}
+                </div>
+              )}
               <div className="profile-form-grid">
                 <div>
                   <label>Job title</label>
