@@ -81,15 +81,6 @@
   font-weight: 800;
 }
 
-.profile-status::before {
-  width: 0.45rem;
-  height: 0.45rem;
-  border-radius: 50%;
-  background: #8ef0ff;
-  box-shadow: 0 0 0 3px rgba(142, 240, 255, 0.2);
-  content: '';
-}
-
 .profile-form .chat-back-btn {
   border: 1px solid rgba(255, 255, 255, 0.34);
   border-radius: 10px;
@@ -175,18 +166,6 @@
   color: #34506f;
   font-size: 0.82rem;
   font-weight: 750;
-}
-
-.profile-form label::before {
-  display: inline-block;
-  width: 0.42rem;
-  height: 0.42rem;
-  margin-right: 0.45rem;
-  border-radius: 50%;
-  background: var(--accent-2);
-  box-shadow: 0 0 0 3px rgba(var(--accent-2-rgb), 0.12);
-  content: '';
-  vertical-align: middle;
 }
 
 .profile-form input,

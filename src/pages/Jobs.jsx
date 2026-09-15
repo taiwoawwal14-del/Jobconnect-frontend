@@ -74,6 +74,7 @@ export default function Jobs() {
       (value) => typeof value === "string" && value.trim(),
     );
     if (requiredValues.length < 7) {
+      setPostStatus("Error: Please fill out all job details.");
       return;
     }
 
@@ -103,6 +104,7 @@ export default function Jobs() {
       setPostStatus("Job posted successfully! ✓");
     } catch (err) {
       console.error(err);
+      setPostStatus(`Error: ${err.message}`);
     } finally {
       setPosting(false);
     }
@@ -204,7 +206,7 @@ export default function Jobs() {
           className={activeTab === "post" ? "active" : ""}
           onClick={() => setActiveTab("post")}
         >
-          Post 
+          Post
         </button>
         <button
           type="button"
@@ -218,7 +220,7 @@ export default function Jobs() {
           className={activeTab === "saved" ? "active" : ""}
           onClick={() => setActiveTab("saved")}
         >
-          Saved 
+          Saved
         </button>
         <button
           type="button"

@@ -28,9 +28,39 @@ export default function Profile() {
     const file = e.target.files && e.target.files[0];
     if (!file || !profile || !isOwnProfile) return;
 
+    // Limit file size to 2MB
+    if (file.size > 2 * 1024 * 1024) {
+      setStatus({ type: "error", message: "Image size must be less than 2MB" });
+      return;
+    }
+
     const reader = new FileReader();
     reader.onload = () => {
-      updateProfile("avatar", reader.result);
+      const img = new Image();
+      img.onload = () => {
+        // Compress image using canvas
+        const canvas = document.createElement("canvas");
+        let width = img.width;
+        let height = img.height;
+
+        // Resize if larger than 500x500
+        if (width > 500 || height > 500) {
+          const ratio = Math.min(500 / width, 500 / height);
+          width *= ratio;
+          height *= ratio;
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0, width, height);
+
+        // Convert to compressed JPEG data URL
+        const compressedDataUrl = canvas.toDataURL("image/jpeg", 0.7);
+        updateProfile("avatar", compressedDataUrl);
+        setStatus({ type: "", message: "" });
+      };
+      img.src = reader.result;
     };
     reader.readAsDataURL(file);
   }
@@ -199,8 +229,7 @@ export default function Profile() {
                 value={profile?.fullName || ""}
                 readOnly={!isOwnProfile}
                 onChange={(e) =>
-                  isOwnProfile &&
-                  updateProfile("fullName", e.target.value)
+                  isOwnProfile && updateProfile("fullName", e.target.value)
                 }
               />
             </div>
@@ -211,8 +240,7 @@ export default function Profile() {
                 value={profile?.username || ""}
                 readOnly={!isOwnProfile}
                 onChange={(e) =>
-                  isOwnProfile &&
-                  updateProfile("username", e.target.value)
+                  isOwnProfile && updateProfile("username", e.target.value)
                 }
               />
             </div>
@@ -223,8 +251,7 @@ export default function Profile() {
                 value={profile?.location || ""}
                 readOnly={!isOwnProfile}
                 onChange={(e) =>
-                  isOwnProfile &&
-                  updateProfile("location", e.target.value)
+                  isOwnProfile && updateProfile("location", e.target.value)
                 }
               />
             </div>
@@ -248,9 +275,7 @@ export default function Profile() {
                 <label>Contact info</label>
                 <input
                   value={profile?.contactInfo || ""}
-                  onChange={(e) =>
-                    updateProfile("contactInfo", e.target.value)
-                  }
+                  onChange={(e) => updateProfile("contactInfo", e.target.value)}
                 />
               </div>
             )}
@@ -262,8 +287,7 @@ export default function Profile() {
                 value={profile?.bio || ""}
                 readOnly={!isOwnProfile}
                 onChange={(e) =>
-                  isOwnProfile &&
-                  updateProfile("bio", e.target.value)
+                  isOwnProfile && updateProfile("bio", e.target.value)
                 }
               />
             </div>
@@ -293,8 +317,7 @@ export default function Profile() {
                 value={profile?.experience || ""}
                 readOnly={!isOwnProfile}
                 onChange={(e) =>
-                  isOwnProfile &&
-                  updateProfile("experience", e.target.value)
+                  isOwnProfile && updateProfile("experience", e.target.value)
                 }
               />
             </div>
