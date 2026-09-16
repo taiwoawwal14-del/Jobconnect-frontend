@@ -122,7 +122,12 @@ export default function Chat() {
 
     socket.on("connect", () => {
       setConnected(true);
+      console.log("Socket connected, joining room:", roomId);
       socket.emit("join_room", { roomId, userId: currentUserId });
+    });
+
+    socket.on("connect_error", (err) => {
+      console.error("Socket connection error:", err);
     });
 
     socket.on("chat_history", (history = []) => {
