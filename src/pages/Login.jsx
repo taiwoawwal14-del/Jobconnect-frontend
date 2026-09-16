@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import "../css/Login.css";
 import logoSrc from "../assets/secondjob.png";
 import { useNavigate } from "react-router-dom";
+import { toast } from "react-toastify";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:3000";
 
@@ -9,13 +10,11 @@ export default function Login() {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [status, setStatus] = useState({ type: "", message: "" });
   const [loading, setLoading] = useState(false);
 
   async function handleSubmit(e) {
     e.preventDefault();
     setLoading(true);
-    setStatus({ type: "", message: "" });
     try {
       const res = await fetch(`${API_BASE}/api/login`, {
         method: "POST",
@@ -24,7 +23,7 @@ export default function Login() {
       });
       const data = await res.json();
       if (res.ok) {
-        setStatus({ type: "success", message: data.message || "Logged in." });
+        toast.success(data.message || "Logged in successfully!");
         // store only userId in localStorage and redirect to jobs
         if (data.user && (data.user.id || data.user._id)) {
           const uid = data.user.id || data.user._id;
@@ -32,13 +31,10 @@ export default function Login() {
         }
         navigate("/jobs");
       } else {
-        setStatus({
-          type: "error",
-          message: data.error || data.message || "Login failed.",
-        });
+        toast.error(data.error || data.message || "Login failed.");
       }
     } catch (err) {
-      setStatus({ type: "error", message: "Network error. Please try again." });
+      toast.error("Network error. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -52,13 +48,6 @@ export default function Login() {
         </div>
         <form className="auth-form" onSubmit={handleSubmit}>
           <h2>Log In</h2>
-          {status.message && (
-            <div
-              className={`msg-box ${status.type === "success" ? "msg-success" : "msg-error"}`}
-            >
-              {status.message}
-            </div>
-          )}
 
           <label>Email</label>
           <input
@@ -84,3 +73,4 @@ export default function Login() {
     </div>
   );
 }
+

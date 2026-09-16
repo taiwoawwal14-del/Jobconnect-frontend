@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { io } from "socket.io-client";
+import { toast } from "react-toastify";
 import "../css/Chat.css";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:3000";
@@ -82,20 +83,23 @@ export default function Chat() {
     }
 
     const loadRecipient = async () => {
+      // Basic ID validation
+      if (!recipientId || recipientId.length !== 24) {
+        setRecipientName("Unknown User");
+        return;
+      }
+
       try {
         const res = await fetch(`${API_BASE}/api/users/${recipientId}`);
-        if (!res.ok) return;
+        if (!res.ok) throw new Error("User not found");
         const user = await res.json();
         const name = user.fullName || user.username || "User";
         setRecipientName(name);
         saveConversation(recipientId, name, "Start a conversation");
-      } catch {
+      } catch (err) {
+        console.warn("Failed to load recipient profile:", err);
         setRecipientName(initialName || "User");
-        saveConversation(
-          recipientId,
-          initialName || "User",
-          "Start a conversation",
-        );
+        saveConversation(recipientId, initialName || "User", "Conversation");
       }
     };
 
@@ -103,6 +107,9 @@ export default function Chat() {
   }, [recipientId, currentUserId, navigate, initialName]);
 
   useEffect(() => {
+    // Clear messages when switching recipient to prevent "bleed"
+    setMessages([]);
+
     if (!recipientId || recipientId === currentUserId) return;
 
     const roomId = [currentUserId, recipientId].sort().join("_");
@@ -316,37 +323,53 @@ export default function Chat() {
           </div>
 
           <div ref={listRef} className="chat-thread">
-            {messages.length === 0 && (
+            {messages.length === 0 ? (
               <div className="chat-empty-msg">
                 <p className="text-muted">
                   No messages yet. Introduce yourself and ask about the role.
                 </p>
               </div>
-            )}
-
-            {messages.map((message) => {
-              const isMine = message.senderId === currentUserId;
-              return (
-                <div
-                  key={message.id || `${message.createdAt}-${message.text}`}
-                  className={`chat-message-row ${isMine ? "mine" : "theirs"}`}
-                >
-                  <div className="chat-bubble">
-                    <div className="chat-bubble-text">{message.text}</div>
-                    <div className="chat-meta">
-                      {message.senderName || "User"} •{" "}
-                      {new Date(message.createdAt).toLocaleString()}
+            ) : (
+              messages.map((message) => {
+                const isMine = message.senderId === currentUserId;
+                return (
+                  <div
+                    key={message._id || message.id || `${message.createdAt}-${message.text}`}
+                    className={`chat-message-row ${isMine ? "mine" : "theirs"}`}
+                  >
+                    <div className="chat-bubble">
+                      <div className="chat-bubble-text">{message.text}</div>
+                      <div className="chat-meta">
+                        {message.senderName || "User"}{" "}
+                        {new Date(message.createdAt).toLocaleTimeString([], {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </div>
                     </div>
                   </div>
-                </div>
-              );
-            })}
+                );
+              })
+            )}
           </div>
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  sendMessage(e);
+                }
+              }}
+
 
           <form className="chat-form" onSubmit={sendMessage}>
             <input
               value={text}
               onChange={(e) => setText(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  sendMessage(e);
+                }
+              }}
               placeholder="Type your message..."
             />
             <button className="btn-submit" type="submit" disabled={!connected}>
@@ -358,3 +381,4 @@ export default function Chat() {
     </div>
   );
 }
+
