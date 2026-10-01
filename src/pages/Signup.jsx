@@ -3,7 +3,7 @@ import "../css/Signup.css";
 import logoSrc from "../assets/secondjob.png";
 import { useNavigate } from "react-router-dom";
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:3000";
+const API_BASE = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/$/, "");
 
 export default function Signup() {
   const navigate = useNavigate();
@@ -19,7 +19,8 @@ export default function Signup() {
     setStatus({ type: "", message: "" });
 
     try {
-      const res = await fetch(`${API_BASE}/api/signup`, {
+      const url = `${API_BASE || ""}/api/signup`;
+      const res = await fetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ fullName, email, password }),

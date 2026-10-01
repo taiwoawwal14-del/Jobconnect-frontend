@@ -4,7 +4,12 @@ import { io } from "socket.io-client";
 import { toast } from "react-toastify";
 import "../css/Chat.css";
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:3000";
+const API_BASE = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/$/, "");
+const SOCKET_BASE = (
+  import.meta.env.VITE_SOCKET_URL ||
+  import.meta.env.VITE_API_BASE_URL ||
+  "http://localhost:3000"
+).replace(/\/$/, "");
 
 function buildRoomId(a, b) {
   return [a, b].filter(Boolean).sort().join("_");
@@ -114,7 +119,7 @@ export default function Chat() {
     if (!recipientId || recipientId === currentUserId) return;
 
     const roomId = buildRoomId(currentUserId, recipientId);
-    const socket = io(API_BASE, {
+    const socket = io(SOCKET_BASE || "http://localhost:3000", {
       transports: ["websocket"],
       reconnectionAttempts: 5,
     });
