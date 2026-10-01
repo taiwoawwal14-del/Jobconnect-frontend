@@ -1,6 +1,6 @@
-/* Jobs page styles - polished, responsive card layout */
 @import './shared.css';
 
+/* Jobs page styles - polished, responsive card layout */
 .jobs-page {
   min-height: auto;
   padding: 2rem 1.2rem 2.5rem;

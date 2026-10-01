@@ -1,3 +1,5 @@
+@import './shared.css';
+
 :root {
   --chat-bg: #f9fbff;
   --bubble-mine: linear-gradient(135deg, #0b66ff, #00a6ff);
@@ -5,11 +7,6 @@
   --text-mine: #ffffff;
   --text-theirs: #052b59;
   --sidebar-bg: #052b59;
-}
-
-@import './shared.css';
-
-:root {
   --jc-navy: #0A2540;
   --jc-blue: #0066FF;
   --jc-blue-hover: #0052CC;

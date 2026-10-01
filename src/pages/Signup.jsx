@@ -35,11 +35,17 @@ export default function Signup() {
         setFullName("");
         setEmail("");
         setPassword("");
-        // store only userId in localStorage and redirect to jobs
-        if (data.user && (data.user.id || data.user._id)) {
-          const uid = data.user.id || data.user._id;
+
+        const user = data.user || {};
+        const uid = user.id || user._id;
+
+        if (uid) {
           localStorage.setItem("userId", uid);
         }
+        if (user.fullName) {
+          localStorage.setItem("userName", user.fullName);
+        }
+
         navigate("/jobs");
       } else {
         setStatus({

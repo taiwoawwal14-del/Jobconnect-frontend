@@ -26,22 +26,15 @@ export default function Jobs() {
   const [searchQuery, setSearchQuery] = useState("");
   const [highlightedJob, setHighlightedJob] = useState(null);
   const [activeTab, setActiveTab] = useState("findJobs");
-  const [savedJobs, setSavedJobs] = useState(() => {
-    try {
-      const saved = localStorage.getItem("jobconnect-saved-jobs");
-      return saved ? JSON.parse(saved) : [];
-    } catch {
-      return [];
-    }
-  });
+  const [savedJobs, setSavedJobs] = useState([]);
 
   useEffect(() => {
     fetchJobs();
   }, []);
 
   useEffect(() => {
-    localStorage.setItem("jobconnect-saved-jobs", JSON.stringify(savedJobs));
-  }, [savedJobs]);
+    setSavedJobs([]);
+  }, [currentUserId]);
 
   function updateField(field, value) {
     setForm((prev) => ({ ...prev, [field]: value }));

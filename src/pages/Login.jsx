@@ -23,12 +23,17 @@ export default function Login() {
       });
       const data = await res.json();
       if (res.ok) {
-        toast.success(data.message || "Logged in successfully!");
-        // store only userId in localStorage and redirect to jobs
-        if (data.user && (data.user.id || data.user._id)) {
-          const uid = data.user.id || data.user._id;
+        const user = data.user || {};
+        const uid = user.id || user._id;
+
+        if (uid) {
           localStorage.setItem("userId", uid);
         }
+        if (user.fullName) {
+          localStorage.setItem("userName", user.fullName);
+        }
+
+        toast.success(data.message || "Logged in successfully!");
         navigate("/jobs");
       } else {
         toast.error(data.error || data.message || "Login failed.");
@@ -73,4 +78,3 @@ export default function Login() {
     </div>
   );
 }
-

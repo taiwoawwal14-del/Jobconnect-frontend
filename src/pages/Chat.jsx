@@ -6,13 +6,8 @@ import "../css/Chat.css";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:3000";
 
-function readConversations() {
-  try {
-    const saved = localStorage.getItem("jobconnect-chat-history");
-    return saved ? JSON.parse(saved) : [];
-  } catch {
-    return [];
-  }
+function buildRoomId(a, b) {
+  return [a, b].filter(Boolean).sort().join("_");
 }
 
 export default function Chat() {
@@ -30,8 +25,15 @@ export default function Chat() {
   const socketRef = useRef(null);
   const listRef = useRef(null);
 
+  function resetChatState() {
+    setConversations([]);
+    setMessages([]);
+    setText("");
+    navigate("/chat");
+  }
+
   function saveConversation(partnerId, partnerName, previewText) {
-    if (!partnerId) return;
+    if (!partnerId || partnerId === currentUserId) return;
 
     setConversations((prev) => {
       const next = [
@@ -42,16 +44,17 @@ export default function Chat() {
           updatedAt: Date.now(),
         },
         ...prev.filter((item) => item.id !== partnerId),
-      ].slice(0, 20);
+      ]
+        .sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt))
+        .slice(0, 20);
 
-      localStorage.setItem("jobconnect-chat-history", JSON.stringify(next));
       return next;
     });
   }
 
   useEffect(() => {
-    setConversations(readConversations());
-  }, []);
+    setConversations([]);
+  }, [currentUserId]);
 
   useEffect(() => {
     const loadPeople = async () => {
@@ -83,7 +86,6 @@ export default function Chat() {
     }
 
     const loadRecipient = async () => {
-      // Basic ID validation
       if (!recipientId || recipientId.length !== 24) {
         setRecipientName("Unknown User");
         return;
@@ -107,12 +109,11 @@ export default function Chat() {
   }, [recipientId, currentUserId, navigate, initialName]);
 
   useEffect(() => {
-    // Clear messages when switching recipient to prevent "bleed"
     setMessages([]);
 
     if (!recipientId || recipientId === currentUserId) return;
 
-    const roomId = [currentUserId, recipientId].sort().join("_");
+    const roomId = buildRoomId(currentUserId, recipientId);
     const socket = io(API_BASE, {
       transports: ["websocket"],
       reconnectionAttempts: 5,
@@ -122,38 +123,41 @@ export default function Chat() {
 
     socket.on("connect", () => {
       setConnected(true);
-      console.log("Socket connected, joining room:", roomId);
       socket.emit("join_room", { roomId, userId: currentUserId });
     });
 
     socket.on("connect_error", (err) => {
       console.error("Socket connection error:", err);
+      toast.error("Chat connection failed. Try again.");
     });
 
     socket.on("chat_history", (history = []) => {
-      setMessages(history);
-      if (history.length > 0) {
-        const last = history[history.length - 1];
-        const partnerName =
-          last.senderId === currentUserId
-            ? recipientName
-            : last.senderName || recipientName;
-        saveConversation(recipientId, partnerName, last.text);
+      const roomMessages = history.filter(
+        (message) => message.roomId === roomId,
+      );
+      setMessages(roomMessages);
+
+      if (roomMessages.length > 0) {
+        const last = roomMessages[roomMessages.length - 1];
+        saveConversation(
+          recipientId,
+          recipientName || initialName || "User",
+          last.text,
+        );
       }
     });
 
     socket.on("receive_message", (message) => {
-      setMessages((prev) => [...prev, message]);
+      if (message.roomId !== roomId) return;
 
-      if (message.senderId === currentUserId) {
-        saveConversation(recipientId, recipientName, message.text);
-      } else {
-        saveConversation(
-          message.senderId,
-          message.senderName || recipientName,
-          message.text,
-        );
-      }
+      setMessages((prev) => [...prev, message]);
+      saveConversation(
+        message.senderId === currentUserId ? recipientId : message.senderId,
+        message.senderId === currentUserId
+          ? recipientName || initialName || "User"
+          : message.senderName || recipientName || "User",
+        message.text,
+      );
     });
 
     socket.on("disconnect", () => setConnected(false));
@@ -161,7 +165,7 @@ export default function Chat() {
     return () => {
       socket.disconnect();
     };
-  }, [recipientId, currentUserId, recipientName]);
+  }, [recipientId, currentUserId, recipientName, initialName]);
 
   useEffect(() => {
     if (listRef.current) {
@@ -171,23 +175,30 @@ export default function Chat() {
 
   function sendMessage(e) {
     e.preventDefault();
-    if (!text.trim() || !recipientId || !socketRef.current) return;
+    const trimmedText = text.trim();
+
+    if (!trimmedText || !recipientId || !socketRef.current) return;
 
     if (recipientId === currentUserId) {
       navigate("/chat");
       return;
     }
 
-    const roomId = [currentUserId, recipientId].sort().join("_");
+    const roomId = buildRoomId(currentUserId, recipientId);
     const payload = {
       roomId,
       senderId: currentUserId,
       senderName: "You",
-      text: text.trim(),
+      recipientId,
+      text: trimmedText,
     };
 
     socketRef.current.emit("send_message", payload);
-    saveConversation(recipientId, recipientName, text.trim());
+    saveConversation(
+      recipientId,
+      recipientName || initialName || "User",
+      trimmedText,
+    );
     setText("");
   }
 
@@ -196,11 +207,24 @@ export default function Chat() {
       <div className="chat-page form-page">
         <div className="chat-shell auth-layout" style={{ maxWidth: 720 }}>
           <div className="auth-form chat-empty-state">
-            <p className="eyebrow">Direct messages</p>
-            <h2>Recent conversations</h2>
+            <div className="chat-header" style={{ marginBottom: "1rem" }}>
+              <div>
+                <p className="eyebrow">Direct messages</p>
+                <h2>Recent conversations</h2>
+              </div>
+              <button
+                type="button"
+                className="chat-back-btn"
+                onClick={resetChatState}
+              >
+                Clear chat
+              </button>
+            </div>
 
             {conversations.length === 0 ? (
-              <p className="text-muted">Choose someone below to start a conversation.</p>
+              <p className="text-muted">
+                Choose someone below to start a conversation.
+              </p>
             ) : (
               <div className="chat-history-list">
                 {conversations.map((conversation) => (
@@ -208,7 +232,9 @@ export default function Chat() {
                     key={conversation.id}
                     type="button"
                     className="chat-history-item"
-                    onClick={() => openConversation(conversation.id, conversation.name)}
+                    onClick={() =>
+                      openConversation(conversation.id, conversation.name)
+                    }
                   >
                     <div>
                       <strong>{conversation.name}</strong>
@@ -257,7 +283,9 @@ export default function Chat() {
             <h2>Conversations</h2>
           </div>
           {conversations.length === 0 ? (
-            <p className="chat-sidebar-empty">Your recent conversations will appear here.</p>
+            <p className="chat-sidebar-empty">
+              Your recent conversations will appear here.
+            </p>
           ) : (
             <div className="chat-history-list">
               {conversations.map((conversation) => (
@@ -280,7 +308,10 @@ export default function Chat() {
           <div className="chat-people-section">
             <p className="chat-list-label">People</p>
             {people
-              .filter((person) => !conversations.some((item) => item.id === person._id))
+              .filter(
+                (person) =>
+                  !conversations.some((item) => item.id === person._id),
+              )
               .map((person) => {
                 const name = person.fullName || person.username || "User";
                 return (
@@ -297,6 +328,7 @@ export default function Chat() {
               })}
           </div>
         </aside>
+
         <div className="auth-form chat-panel">
           <div className="chat-header">
             <button
@@ -324,6 +356,13 @@ export default function Chat() {
               >
                 View profile
               </button>
+              <button
+                type="button"
+                className="chat-back-btn"
+                onClick={resetChatState}
+              >
+                Clear chat
+              </button>
             </div>
           </div>
 
@@ -339,7 +378,11 @@ export default function Chat() {
                 const isMine = message.senderId === currentUserId;
                 return (
                   <div
-                    key={message._id || message.id || `${message.createdAt}-${message.text}`}
+                    key={
+                      message._id ||
+                      message.id ||
+                      `${message.createdAt}-${message.text}`
+                    }
                     className={`chat-message-row ${isMine ? "mine" : "theirs"}`}
                   >
                     <div className="chat-bubble">
@@ -357,13 +400,6 @@ export default function Chat() {
               })
             )}
           </div>
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
-                  e.preventDefault();
-                  sendMessage(e);
-                }
-              }}
-
 
           <form className="chat-form" onSubmit={sendMessage}>
             <input
@@ -386,4 +422,3 @@ export default function Chat() {
     </div>
   );
 }
-
