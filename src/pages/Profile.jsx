@@ -5,7 +5,9 @@ import "../css/Profile.css";
 const API_BASE = (
   import.meta.env.VITE_API_URL ||
   import.meta.env.VITE_API_BASE_URL ||
-  (import.meta.env.DEV ? "http://localhost:3000" : "")
+  (import.meta.env.DEV
+    ? "http://localhost:3000"
+    : "https://jobconnect-backend-9q6l.onrender.com")
 ).replace(/\/$/, "");
 
 export default function Profile() {
