@@ -3,7 +3,11 @@ import "../css/Signup.css";
 import logoSrc from "../assets/secondjob.png";
 import { useNavigate } from "react-router-dom";
 
-const API_BASE = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/$/, "");
+const API_BASE = (
+  import.meta.env.VITE_API_URL ||
+  import.meta.env.VITE_API_BASE_URL ||
+  (import.meta.env.DEV ? "http://localhost:3000" : "")
+).replace(/\/$/, "");
 
 export default function Signup() {
   const navigate = useNavigate();
@@ -58,7 +62,7 @@ export default function Signup() {
       setStatus({
         type: "error",
         message:
-          "Network error. Please check if your Express backend is running on port 3000.",
+          "Network error. Check the deployed backend URL and Vercel environment variables.",
       });
     } finally {
       setLoading(false);

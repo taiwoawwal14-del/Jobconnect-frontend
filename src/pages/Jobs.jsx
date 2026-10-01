@@ -2,7 +2,11 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import "../css/Jobs.css";
 
-const API_BASE = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/$/, "");
+const API_BASE = (
+  import.meta.env.VITE_API_URL ||
+  import.meta.env.VITE_API_BASE_URL ||
+  (import.meta.env.DEV ? "http://localhost:3000" : "")
+).replace(/\/$/, "");
 
 const emptyForm = {
   title: "",

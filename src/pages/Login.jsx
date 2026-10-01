@@ -4,7 +4,11 @@ import logoSrc from "../assets/secondjob.png";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 
-const API_BASE = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/$/, "");
+const API_BASE = (
+  import.meta.env.VITE_API_URL ||
+  import.meta.env.VITE_API_BASE_URL ||
+  (import.meta.env.DEV ? "http://localhost:3000" : "")
+).replace(/\/$/, "");
 
 export default function Login() {
   const navigate = useNavigate();
@@ -40,7 +44,9 @@ export default function Login() {
         toast.error(data.error || data.message || "Login failed.");
       }
     } catch (err) {
-      toast.error("Network error. Please try again.");
+      toast.error(
+        "Network error. Check the backend URL and Vercel environment variables.",
+      );
     } finally {
       setLoading(false);
     }
